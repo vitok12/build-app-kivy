@@ -1,60 +1,42 @@
-__version__ = '0.1'
+'''
+Widget animation
+================
 
+This example demonstrates creating and applying a multi-part animation to
+a button widget. You should see a button labelled 'plop' that will move with
+an animation when clicked.
+'''
+
+import kivy
+kivy.require('1.0.7')
+
+from kivy.animation import Animation
 from kivy.app import App
-from jnius import autoclass, cast
+from kivy.uix.button import Button
 
-from PIL import Image
 
-from android import activity, mActivity
-from android.permissions import request_permissions, Permission
-from android.storage import primary_external_storage_path
-request_permissions([Permission.CAMERA, Permission.READ_EXTERNAL_STORAGE])
+class TestApp(App):
 
-from kivy.logger import Logger
-from kivy.config import Config
-Config.set('kivy', 'log_level', 'debug')
-Config.set('kivy', 'log_dir', 'logs')
-Config.set('kivy', 'log_name', 'kivy_%y-%m-%d_%_.txt')
-Config.set('kivy', 'log_enable', 1)
-Config.write()
-Logger.debug("DEBUG: primary_external_storage_path")
-Logger.debug("DEBUG: %s", primary_external_storage_path())
+    def animate(self, instance):
+        # create an animation object. This object could be stored
+        # and reused each call or reused across different widgets.
+        # += is a sequential step, while &= is in parallel
+        animation = Animation(pos=(100, 100), t='out_bounce')
+        animation += Animation(pos=(200, 100), t='out_bounce')
+        animation &= Animation(size=(500, 500))
+        animation += Animation(size=(100, 50))
 
-Intent = autoclass('android.content.Intent')
-MediaStore = autoclass('android.provider.MediaStore')
-Environment = autoclass('android.os.Environment')
-Context = autoclass("android.content.Context")
-FileProvider = autoclass('android.support.v4.content.FileProvider')
-PythonActivity = autoclass("org.kivy.android.PythonActivity").mActivity
+        # apply the animation on the button, passed in the "instance" argument
+        # Notice that default 'click' animation (changing the button
+        # color while the mouse is down) is unchanged.
+        animation.start(instance)
 
-class TakePictureApp(App):
-    def take_picture(self):
-        def create_img_file():
-            File = autoclass('java.io.File')
-            storageDir = Context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+    def build(self):
+        # create a button, and  attach animate() method as a on_press handler
+        button = Button(size_hint=(None, None), text='plop',
+                        on_press=self.animate)
+        return button
 
-            imageFile = File(
-                storageDir,
-                "temp.jpg"
-            )
-            imageFile.createNewFile()
-            return imageFile
 
-        intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-
-        photoFile = create_img_file()
-        photoUri = FileProvider.getUriForFile(
-            Context.getApplicationContext(),
-            "org.test.takepicture.fileprovider",
-            photoFile
-        )
-
-        parcelable = cast('android.os.Parcelable', photoUri)
-
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, parcelable)
-        mActivity.startActivityForResult(intent, 0x123)
-
-    def on_pause(self):
-        return True
-
-TakePictureApp().run()
+if __name__ == '__main__':
+    TestApp().run()
